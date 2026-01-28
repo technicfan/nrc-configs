@@ -1,0 +1,220 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://norisk.gg/schemas/pack.schema.json",
+  "title": "NoRisk Pack Configuration",
+  "description": "Schema for NoRisk modpack configuration files",
+  "type": "object",
+  "required": ["displayName", "description"],
+  "properties": {
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Display name of the modpack"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the modpack"
+    },
+    "inheritsFrom": {
+      "type": ["array", "null"],
+      "items": { "type": "string" },
+      "description": "List of pack IDs to inherit from (processed in order)"
+    },
+    "excludeMods": {
+      "type": ["array", "null"],
+      "items": { "type": "string" },
+      "description": "Mod IDs to exclude after inheritance"
+    },
+    "mods": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/mod" },
+      "default": [],
+      "description": "List of mods in this pack"
+    },
+    "assets": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": [],
+      "description": "Asset pack references"
+    },
+    "isExperimental": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether this is an experimental pack"
+    },
+    "autoUpdate": {
+      "type": "boolean",
+      "default": false,
+      "description": "Whether mods should auto-update"
+    },
+    "loaderPolicy": {
+      "oneOf": [
+        { "$ref": "#/$defs/loaderPolicy" },
+        { "type": "null" }
+      ],
+      "description": "Loader version policy configuration"
+    },
+    "startupHelper": {
+      "$ref": "#/$defs/startupHelper",
+      "description": "Startup helper configuration"
+    }
+  },
+  "$defs": {
+    "mod": {
+      "type": "object",
+      "required": ["id", "source", "compatibility"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Unique mod identifier"
+        },
+        "displayName": {
+          "type": ["string", "null"],
+          "description": "Display name of the mod (optional)"
+        },
+        "source": {
+          "$ref": "#/$defs/modSource",
+          "description": "Source configuration for downloading the mod"
+        },
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/loaderCompatibility"
+          },
+          "description": "Minecraft version -> loader compatibility mapping"
+        }
+      }
+    },
+    "modSource": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["modrinth", "maven", "url"],
+          "description": "Source type"
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Modrinth project ID (required for modrinth type)"
+        },
+        "projectSlug": {
+          "type": "string",
+          "description": "Modrinth project slug (required for modrinth type)"
+        },
+        "repositoryRef": {
+          "type": "string",
+          "description": "Maven repository reference (required for maven type)"
+        },
+        "groupId": {
+          "type": ["string", "null"],
+          "description": "Maven group ID (optional for maven type)"
+        },
+        "artifactId": {
+          "type": ["string", "null"],
+          "description": "Maven artifact ID (optional for maven type)"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "type": { "const": "modrinth" } }
+          },
+          "then": {
+            "required": ["projectId", "projectSlug"]
+          }
+        },
+        {
+          "if": {
+            "properties": { "type": { "const": "maven" } }
+          },
+          "then": {
+            "required": ["repositoryRef"]
+          }
+        }
+      ]
+    },
+    "loaderCompatibility": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/compatibilityTarget"
+      },
+      "description": "Loader -> version entry mapping (e.g., fabric, forge)"
+    },
+    "compatibilityTarget": {
+      "type": "object",
+      "required": ["identifier"],
+      "properties": {
+        "identifier": {
+          "type": "string",
+          "description": "Version identifier (semver, modrinth version ID, or URL)"
+        },
+        "filename": {
+          "type": ["string", "null"],
+          "description": "Override filename"
+        },
+        "source": {
+          "oneOf": [
+            { "$ref": "#/$defs/modSource" },
+            { "type": "null" }
+          ],
+          "description": "Override source for this specific version"
+        }
+      }
+    },
+    "loaderPolicy": {
+      "type": "object",
+      "properties": {
+        "default": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/loaderSpec"
+          },
+          "default": {},
+          "description": "Default loader specs (fallback if no byMinecraft match)"
+        },
+        "byMinecraft": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/$defs/loaderSpec"
+            }
+          },
+          "default": {},
+          "description": "Minecraft version specific loader specs (e.g., '1.20.1', '1.21', '1.21.*')"
+        }
+      }
+    },
+    "loaderSpec": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": ["string", "null"],
+          "description": "Exact version (implies EXACT strategy)"
+        },
+        "min": {
+          "type": ["string", "null"],
+          "description": "Minimum version (for non-EXACT strategies)"
+        },
+        "strategy": {
+          "type": ["string", "null"],
+          "enum": ["exact", "latest_compatible", "min_compatible", null],
+          "description": "Version resolution strategy"
+        }
+      }
+    },
+    "startupHelper": {
+      "type": "object",
+      "properties": {
+        "additional_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "Additional paths for startup"
+        }
+      }
+    }
+  }
+}

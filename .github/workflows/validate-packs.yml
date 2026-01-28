@@ -1,0 +1,175 @@
+name: Validate Pack Configs
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packs/**/*.json'
+  push:
+    branches: [main]
+    paths:
+      - 'packs/**/*.json'
+
+jobs:
+  validate:
+    name: Validate Pack JSON
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install ajv-cli
+        run: npm install -g ajv-cli ajv-formats
+
+      - name: Validate JSON syntax
+        run: |
+          echo "Checking JSON syntax..."
+          for file in packs/*.json; do
+            if [ -f "$file" ]; then
+              echo "Validating syntax: $file"
+              if ! python3 -m json.tool "$file" > /dev/null 2>&1; then
+                echo "❌ Invalid JSON syntax in $file"
+                python3 -m json.tool "$file"
+                exit 1
+              fi
+              echo "✅ $file - syntax OK"
+            fi
+          done
+
+      - name: Validate against schema
+        run: |
+          echo "Validating against schema..."
+          for file in packs/*.json; do
+            if [ -f "$file" ]; then
+              echo "Validating schema: $file"
+              if ! ajv validate -s schemas/pack.schema.json -d "$file" --spec=draft2020 -c ajv-formats; then
+                echo "❌ Schema validation failed for $file"
+                exit 1
+              fi
+              echo "✅ $file - schema OK"
+            fi
+          done
+
+      - name: Check for duplicate mod IDs
+        run: |
+          echo "Checking for duplicate mod IDs..."
+          for file in packs/*.json; do
+            if [ -f "$file" ]; then
+              echo "Checking: $file"
+              DUPLICATES=$(python3 -c "
+          import json
+          import sys
+          with open('$file') as f:
+              data = json.load(f)
+          ids = [mod['id'] for mod in data.get('mods', [])]
+          seen = set()
+          duplicates = []
+          for id in ids:
+              if id in seen:
+                  duplicates.append(id)
+              seen.add(id)
+          if duplicates:
+              print('Duplicate IDs: ' + ', '.join(duplicates))
+              sys.exit(1)
+          ")
+              if [ $? -ne 0 ]; then
+                echo "❌ $file has duplicate mod IDs"
+                echo "$DUPLICATES"
+                exit 1
+              fi
+              echo "✅ $file - no duplicates"
+            fi
+          done
+
+      - name: Check mod ID format (warning only)
+        run: |
+          echo "Checking mod ID format (recommendations)..."
+          python3 << 'EOF'
+          import json
+          import re
+          import glob
+
+          pattern = re.compile(r'^[a-z0-9_-]+$')
+          warnings = []
+
+          for filepath in glob.glob('packs/*.json'):
+              with open(filepath) as f:
+                  data = json.load(f)
+
+              for mod in data.get('mods', []):
+                  mod_id = mod.get('id', '')
+                  if not pattern.match(mod_id):
+                      warnings.append(f"{filepath}: Mod ID '{mod_id}' - consider using lowercase alphanumeric with hyphens/underscores")
+
+          if warnings:
+              print("⚠️ Recommendations (non-blocking):")
+              for warning in warnings:
+                  print(f"  - {warning}")
+          else:
+              print("✅ All mod IDs follow recommended format")
+          EOF
+
+      - name: Check source configuration
+        run: |
+          echo "Checking source configurations..."
+          python3 << 'EOF'
+          import json
+          import sys
+          import glob
+
+          errors = []
+
+          for filepath in glob.glob('packs/*.json'):
+              with open(filepath) as f:
+                  data = json.load(f)
+
+              for mod in data.get('mods', []):
+                  mod_id = mod.get('id', '')
+                  source = mod.get('source', {})
+                  source_type = source.get('type', '')
+
+                  if source_type == 'modrinth':
+                      if not source.get('projectId'):
+                          errors.append(f"{filepath}: Mod '{mod_id}' - modrinth source missing projectId")
+                      if not source.get('projectSlug'):
+                          errors.append(f"{filepath}: Mod '{mod_id}' - modrinth source missing projectSlug")
+
+                  elif source_type == 'maven':
+                      # Only repositoryRef is required, groupId/artifactId are optional
+                      if not source.get('repositoryRef'):
+                          errors.append(f"{filepath}: Mod '{mod_id}' - maven source missing repositoryRef")
+
+                  elif source_type == 'url':
+                      pass  # URL type is valid without additional fields
+
+                  elif source_type:
+                      errors.append(f"{filepath}: Mod '{mod_id}' - unknown source type '{source_type}'")
+                  else:
+                      errors.append(f"{filepath}: Mod '{mod_id}' - missing source type")
+
+          if errors:
+              for error in errors:
+                  print(f"❌ {error}")
+              sys.exit(1)
+
+          print("✅ All source configurations are valid")
+          EOF
+
+      - name: Summary
+        if: success()
+        run: |
+          echo "## ✅ All validations passed!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Validated files:" >> $GITHUB_STEP_SUMMARY
+          for file in packs/*.json; do
+            if [ -f "$file" ]; then
+              MODS=$(python3 -c "import json; print(len(json.load(open('$file')).get('mods', [])))")
+              echo "- \`$file\` ($MODS mods)" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
