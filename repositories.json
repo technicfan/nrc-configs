@@ -1,0 +1,14 @@
+{
+  "modrinth": "https://api.modrinth.com/maven/",
+  "kosmx": "https://maven.kosmx.dev/",
+  "norisksnapshots": "https://maven.norisk.gg/repository/norisk-snapshots/",
+  "jitpack": "https://jitpack.io/",
+  "fabric": "https://maven.fabricmc.net/",
+  "central": "https://repo1.maven.org/maven2/",
+  "geckolib": "https://dl.cloudsmith.io/public/geckolib3/geckolib/maven/",
+  "norisk": "https://dl.norisk.gg/",
+  "terraformersmc": "https://maven.terraformersmc.com/",
+  "viaversion": "https://repo.viaversion.com/",
+  "wispforest": "https://maven.wispforest.io/",
+  "noriskproduction": "https://maven.norisk.gg/repository/norisk-production/"
+}

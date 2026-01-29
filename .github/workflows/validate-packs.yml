@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - 'packs/**/*.json'
+      - 'repositories.json'
+      - 'schemas/**'
   push:
     branches: [main]
     paths:
       - 'packs/**/*.json'
+      - 'repositories.json'
+      - 'schemas/**'
 
 jobs:
   validate:
@@ -30,7 +34,7 @@ jobs:
       - name: Validate JSON syntax
         run: |
           echo "Checking JSON syntax..."
-          for file in packs/*.json; do
+          for file in packs/*.json repositories.json; do
             if [ -f "$file" ]; then
               echo "Validating syntax: $file"
               if ! python3 -m json.tool "$file" > /dev/null 2>&1; then
@@ -44,7 +48,7 @@ jobs:
 
       - name: Validate against schema
         run: |
-          echo "Validating against schema..."
+          echo "Validating packs against schema..."
           for file in packs/*.json; do
             if [ -f "$file" ]; then
               echo "Validating schema: $file"
@@ -55,6 +59,19 @@ jobs:
               echo "✅ $file - schema OK"
             fi
           done
+
+          echo ""
+          echo "Validating repositories.json..."
+          if [ -f "repositories.json" ]; then
+            if ! ajv validate -s schemas/repositories.schema.json -d repositories.json --spec=draft2020 -c ajv-formats; then
+              echo "❌ Schema validation failed for repositories.json"
+              exit 1
+            fi
+            echo "✅ repositories.json - schema OK"
+          else
+            echo "❌ repositories.json not found!"
+            exit 1
+          fi
 
       - name: Check for duplicate mod IDs
         run: |

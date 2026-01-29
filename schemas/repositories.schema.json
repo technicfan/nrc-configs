@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://norisk.gg/schemas/repositories.schema.json",
+  "title": "NoRisk Maven Repositories",
+  "description": "Schema for Maven repository configuration",
+  "type": "object",
+  "additionalProperties": {
+    "type": "string",
+    "format": "uri",
+    "pattern": "^https?://",
+    "description": "Maven repository URL"
+  },
+  "minProperties": 1
+}
