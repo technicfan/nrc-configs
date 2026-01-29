@@ -6,7 +6,7 @@ This guide explains how to set up your own development branch and pack for contr
 
 ### 1. Create Your Branch (nrc-core)
 
-Fork/branch from the main development branch:
+branch from the main development branch:
 ```
 https://github.com/NoRiskClient/nrc-core/tree/dev/mojang-mappings
 ```
@@ -118,5 +118,4 @@ NoRisk uses semantic versioning with branch info:
 
 ## Questions?
 
-- Discord: [NoRisk Discord](https://discord.gg/norisk)
-- Issues: [nrc-configs Issues](https://github.com/NoRiskClient/nrc-configs/issues)
+- Discord: [NoRisk Discord](https://discord.norisk.gg)
