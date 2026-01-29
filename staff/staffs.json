@@ -1,1 +1,6 @@
-{}
+{
+  "staff": [
+    { "username": "NoRiskk", "role": "admin" },
+    { "username": "jakubxyz", "role": "developer" }
+  ]
+}
